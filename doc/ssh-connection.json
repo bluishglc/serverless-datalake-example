@@ -1,0 +1,5 @@
+{
+  "key_file": "s3://keys/key.pem",
+  "no_host_key_check": "true",
+  "timeout": "10"
+}

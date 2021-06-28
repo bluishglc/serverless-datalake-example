@@ -1,0 +1,62 @@
+[
+  {
+    "layer": "stg",
+    "domain": "pub",
+    "creator": "glue-crawler",
+    "tables": []
+  },
+  {
+    "layer": "stg",
+    "domain": "geo",
+    "creator": "glue-crawler",
+    "tables": []
+  },
+  {
+    "layer": "stg",
+    "domain": "tlc",
+    "creator": "glue-crawler",
+    "tables": []
+  },
+  {
+    "layer": "ods",
+    "domain": "geo",
+    "creator": "hudi-hive-sync",
+    "tables": [ "ods.geo_taxi_zone" ]
+  },
+  {
+    "layer": "ods",
+    "domain": "tlc",
+    "creator": "sql",
+    "tables": [ "ods.tlc_yellow_trip", "ods.tlc_green_trip", "ods.tlc_fhv_trip", "ods.tlc_fhvhv_trip" ]
+  },
+  {
+    "layer": "dwh",
+    "domain": "geo",
+    "creator": "hudi-hive-sync",
+    "tables": [ "dwh.geo_taxi_zone" ]
+  },
+  {
+    "layer": "dwh",
+    "domain": "tlc",
+    "creator": "sql",
+    "tables": [ "dwh.tlc_yellow_trip", "dwh.tlc_green_trip", "dwh.tlc_fhv_trip", "dwh.tlc_fhvhv_trip" ]
+  },
+  {
+    "layer": "dmt",
+    "domain": "pub",
+    "creator": "sql",
+    "tables": [ "dmt.pub_dim_date" ]
+  },
+  {
+    "layer": "dmt",
+    "domain": "geo",
+    "creator": "hudi-hive-sync",
+    "tables": [ "dmt.geo_dim_taxi_zone" ]
+  },
+  {
+    "layer": "dmt",
+    "domain": "tlc",
+    "creator": "sql",
+    "tables": [ "dmt.tlc_union_trip", "dmt.tlc_wide_trip" ]
+  }
+]
