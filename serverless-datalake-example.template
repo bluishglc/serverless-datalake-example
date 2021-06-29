@@ -3,7 +3,7 @@ Metadata:
   AUTHOR: 'Laurence Geng'
 Parameters:
   InstanceType:
-    Description: Ranger Server EC2 Instance Type
+    Description: SDL Server EC2 Instance Type
     Type: String
     Default: m5.large
     AllowedValues: [ t2.nano, t2.micro, t2.small, t2.medium, t2.large, t2.xlarge, t2.2xlarge,
@@ -32,7 +32,7 @@ Parameters:
     Description: The Public subnet where the ec2 instance will be launched
     Type: AWS::EC2::Subnet::Id
   VpcId:
-    Description: The VPC to launch the Ranger server
+    Description: The VPC to launch the SDL server
     Type: AWS::EC2::VPC::Id
   KeyFileS3Path:
     Description: >-
@@ -120,19 +120,19 @@ Resources:
           /opt/aws/bin/cfn-init -v --stack ${AWS::StackName} --resource Ec2Instance --region ${AWS::Region} --configsets Init
           # sleep for a while so as instance initialing, otherwise, network or other resources may be not available
           sleep 30
-          wget http://52.81.173.97:7080/${project.build.finalName}.zip -P /tmp/
-          unzip -o /tmp/${project.build.finalName}.zip -d /home/ec2-user/
-          sh ${deploy.home}/bin/install.sh \
+          wget https://github.com/bluishglc/serverless-datalake-example/releases/download/v1.0/serverless-datalake-example-1.0.zip -P /tmp/
+          unzip -o /tmp/serverless-datalake-example-1.0.zip -d /home/ec2-user/
+          sh /home/ec2-user/serverless-datalake-example-1.0/bin/install.sh \
           --region ${AWS::Region} \
           --app-bucket ${AppBucket} \
           --data-bucket ${DataBucket} \
           --airflow-dags-home ${AirflowDagsHome} \
           --access-key-id ${AccessKeyId} \
-          --access-key ${AccessKey} &> /home/ec2-user/${project.build.finalName}.log
+          --access-key ${AccessKey} &> /home/ec2-user/serverless-datalake-example-1.0.log
           /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource Ec2Instance --region ${AWS::Region}
       Tags:
         - Key: Name
-          Value: Ranger Server
+          Value: SDL Server
     Metadata:
       AWS::CloudFormation::Authentication:
         S3AccessCreds:
