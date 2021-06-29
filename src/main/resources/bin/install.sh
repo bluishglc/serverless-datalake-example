@@ -16,7 +16,7 @@ CONSTANTS_FILE="$SDL_HOME/bin/constants.sh"
 
 install() {
     printHeading "INSTALL SERVERLESS DATALAKE"
-    installAwsCli
+    # installAwsCli
     configAwsCli
     createIamRole
     replaceEnvVars
@@ -92,15 +92,19 @@ installAwsCli() {
     echo "Install latest awscli v2 ..."
     wget "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -P "/tmp/awscli/"
     unzip /tmp/awscli/awscli-exe-linux-x86_64.zip -d /tmp/awscli/ &> /dev/null
-    sudo  /tmp/awscli/aws/install
+    sudo /tmp/awscli/aws/install
 }
 
 configAwsCli() {
     mkdir -p ~/.aws
+    cat <<-EOF > ~/.aws/config
+[default]
+region = $REGION
+EOF
     cat <<-EOF > ~/.aws/credentials
-    [default]
-    aws_access_key_id = $ACCESS_KEY_ID
-    aws_secret_access_key = $ACCESS_KEY
+[default]
+aws_access_key_id = $ACCESS_KEY_ID
+aws_secret_access_key = $ACCESS_KEY
 EOF
 }
 
