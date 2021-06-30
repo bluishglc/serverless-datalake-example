@@ -16,7 +16,7 @@ CONSTANTS_FILE="$SDL_HOME/bin/constants.sh"
 
 install() {
     printHeading "INSTALL SERVERLESS DATALAKE"
-    # installAwsCli
+    installAwsCli
     configAwsCli
     createIamRole
     replaceEnvVars
