@@ -1,6 +1,5 @@
 # Serverless Datalake Example/Framework: The Best Practice of Serverless Datalake Building Based on AWS
 
-
 ## 1. Build
 
 To build this project, you need have JDK & Maven on your local, and you should also have an AWS account with Admin role.
@@ -30,8 +29,6 @@ then unzip package and run install command:
 ```
 
 Note: the parameters of cli will overwrite values in prd/dev properties files.
-
-5. Run install
 
 
 ## 3. Run
