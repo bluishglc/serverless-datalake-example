@@ -1,6 +1,5 @@
 # Serverless Datalake Example/Framework: The Best Practice of Serverless Datalake Building Based on AWS
 
-[TOC]
 
 ## 1. Build
 
