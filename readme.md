@@ -4,7 +4,7 @@
 
 To build this project, you need have JDK & Maven on your local, and you should also have an AWS account with Admin role.
 
-1. Check out project with
+1. Check out project.
 2. Update src/main/profiles/prd.properties, change replace all "<...>" values against your environment.
 3. Run maven command under project root dir:
 
@@ -33,9 +33,7 @@ Note: the parameters of cli will overwrite values in prd/dev properties files.
 
 ## 3. Run
 
-There is 2 ways to run, one is by airflow, the other is by cli. for airflow, you must have a running airflow environment, and have a configured ssh connection name `ssh_to_client` which can connect to current node via ssh, then copy `wfl/sdl_monthly_build.py` to the dag folder of airflow or assign path to --airflow-dags-home in install command, if all done, you will see a dag named `sdl-monthly-build`, then you can start it from airflow console page.
-
-or you can run this project via cli immediately as following:
+There are 2 ways to run, one is by airflow, the other is by cli. for airflow, you must have a running airflow environment, and have a configured ssh connection name `ssh_to_client` which can connect to current node via ssh, then copy `wfl/sdl_monthly_build.py` to the dag folder of airflow or assign path to --airflow-dags-home in install command, if all done, you will see a dag named `sdl-monthly-build`, then you can start it from airflow console page. Or you can run this project via cli immediately as following:
 
 ```bash
 ./serverless-datalake-example-1.0/bin/sdl.sh build --year 2020 --month 01
