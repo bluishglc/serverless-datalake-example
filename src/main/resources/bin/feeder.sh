@@ -16,10 +16,12 @@ feedTlcData() {
     printHeading "FEED TLC DATA"
     # remove previous uploaded files
     rm -rf /tmp/nyc-tlc
+    mkdir /tmp/nyc-tlc
     aws s3 rm "s3://$DATA_BUCKET/stg/tlc" --recursive
 
     for category in yellow green fhv fhvhv; do
-        wget "https://nyc-tlc.s3.amazonaws.com/trip data/${category}_tripdata_${YEAR}-${MONTH}.csv" -P "/tmp/nyc-tlc/"
+        # wget "https://nyc-tlc.s3.amazonaws.com/trip data/${category}_tripdata_${YEAR}-${MONTH}.csv" -P "/tmp/nyc-tlc/"
+        aws s3 cp "s3://nyc-tlc/csv_backup/${category}_tripdata_${YEAR}-${MONTH}.csv" "/tmp/nyc-tlc/"
         aws s3 cp "/tmp/nyc-tlc/${category}_tripdata_${YEAR}-${MONTH}.csv" "s3://$DATA_BUCKET/stg/tlc/${category}_trip/"
     done
 }
