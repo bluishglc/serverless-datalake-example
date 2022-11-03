@@ -19,7 +19,7 @@ mvn clean package
 You have 2 ways to get installer package, one is building from source codes just as step above, the other one is downloading directly:
 
 ```bash
-wget https://github.com/bluishglc/serverless-datalake-example/releases/download/v1.0/serverless-datalake-example-1.0.zip
+wget https://github.com/bluishglc/serverless-datalake-example/releases/download/v1.1/serverless-datalake-example-1.0.zip
 ```
 
 then unzip package and run install command:

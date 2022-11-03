@@ -1,0 +1,25 @@
+Resources:
+  ProjectRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      RoleName: sdl-iam-role
+      AssumeRolePolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - glue.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Path: "/"
+      Policies:
+        - PolicyName: "root"
+          PolicyDocument:
+            Statement:
+              - Effect: "Allow"
+                Action: "*"
+                Resource: "*"
+Outputs:
+  Arn:
+    Description: The Arn of Project Role
+    Value: !GetAtt ProjectRole.Arn

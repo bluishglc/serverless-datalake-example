@@ -1,0 +1,2 @@
+alter table dwh.tlc_fhv_trip drop if exists partition (year='@year@', month='@month@');
+alter table dwh.tlc_fhv_trip add if not exists partition (year='@year@', month='@month@') location 's3://${data.bucket}/ods/tlc_fhv_trip/year=@year@/month=@month@';
