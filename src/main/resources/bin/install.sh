@@ -9,7 +9,7 @@ APP_BUCKET=""
 DATA_BUCKET=""
 AIRFLOW_DAGS_HOME=""
 ACCESS_KEY_ID=""
-ACCESS_KEY=""
+SECRET_ACCESS_KEY=""
 
 ROLE_ARN=""
 CONSTANTS_FILE="$SDL_HOME/bin/constants.sh"
@@ -21,8 +21,7 @@ install() {
     createIamRole
     replaceEnvVars
     createCliShortcuts
-    # initialize serverless datalake
-    $SDL_HOME/bin/sdl.sh init
+    createBucketIfNotExists
     printHeading "ALL DONE"
 }
 
@@ -104,8 +103,20 @@ EOF
     cat <<-EOF > ~/.aws/credentials
 [default]
 aws_access_key_id = $ACCESS_KEY_ID
-aws_secret_access_key = $ACCESS_KEY
+aws_secret_access_key = $SECRET_ACCESS_KEY
 EOF
+}
+
+createBucketIfNotExists() {
+    aws s3 ls s3://$APP_BUCKET &> /dev/null
+    if [ "$?" != "0" ]; then
+        aws s3 mb s3://$APP_BUCKET
+    fi
+
+    aws s3 ls s3://$DATA_BUCKET &> /dev/null
+    if [ "$?" != "0" ]; then
+        aws s3 mb s3://$DATA_BUCKET
+    fi
 }
 
 parseArgs() {
@@ -115,7 +126,7 @@ parseArgs() {
     fi
 
     optString="r:a:d:h:i:k"
-    longOptString="region:,app-bucket:,data-bucket:,airflow-dags-home:,access-key-id:,access-key:"
+    longOptString="region:,app-bucket:,data-bucket:,airflow-dags-home:,access-key-id:,secret-access-key:"
 
     # IMPORTANT!! -o option can not be omitted, even there are no any short options!
     # otherwise, parsing will go wrong!
@@ -149,8 +160,8 @@ parseArgs() {
                 ACCESS_KEY_ID="${2}"
                 shift 2
                 ;;
-            -k|--access-key)
-                ACCESS_KEY="${2}"
+            -k|--secret-access-key)
+                SECRET_ACCESS_KEY="${2}"
                 shift 2
                 ;;
             --) # No more arguments
@@ -183,12 +194,12 @@ printUsage() {
     echo "-d|--data-bucket                      the bucket for datalake to store data"
     echo "-h|--airflow-dags-home                the dags home for MWAA (airflow)"
     echo "-i|--access-key-id                    the access key id, used by aws cli"
-    echo "-i|--access-key                       the access key file, used by aws cli"
+    echo "-i|--secret-access-key                       the access key file, used by aws cli"
     echo ""
     echo "EXAMPLES:"
     echo ""
     echo "# install project"
-    echo -ne "$0 --region us-east-1 --app-bucket sdl-app --data-bucket sdl-data --airflow-dags-home s3://<my-airflow-dags> --access-key-id <my-access-key-id> --access-key <my-access-key>"
+    echo -ne "$0 --region us-east-1 --app-bucket sdl-app --data-bucket sdl-data --airflow-dags-home s3://<my-airflow-dags> --access-key-id <my-access-key-id> --secret-access-key <my-secret-access-key>"
     echo ""
     echo ""
 }

@@ -58,7 +58,7 @@ Parameters:
   AccessKeyId:
     Description: The bucket name to store application files.
     Type: String
-  AccessKey:
+  SecretAccessKey:
     Description: The bucket name to store application files.
     Type: String
 
@@ -128,7 +128,7 @@ Resources:
           --data-bucket ${DataBucket} \
           --airflow-dags-home ${AirflowDagsHome} \
           --access-key-id ${AccessKeyId} \
-          --access-key ${AccessKey} &> /home/ec2-user/serverless-datalake-example-1.0.log
+          --secret-access-key ${SecretAccessKey} &> /home/ec2-user/serverless-datalake-example-1.0.log
           /opt/aws/bin/cfn-signal -e $? --stack ${AWS::StackName} --resource Ec2Instance --region ${AWS::Region}
       Tags:
         - Key: Name

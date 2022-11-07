@@ -20,10 +20,16 @@ feedTlcData() {
     aws s3 rm "s3://$DATA_BUCKET/stg/tlc" --recursive
 
     for category in yellow green fhv fhvhv; do
-        # wget "https://nyc-tlc.s3.amazonaws.com/trip data/${category}_tripdata_${YEAR}-${MONTH}.csv" -P "/tmp/nyc-tlc/"
-        aws s3 cp "s3://nyc-tlc/csv_backup/${category}_tripdata_${YEAR}-${MONTH}.csv" "/tmp/nyc-tlc/"
-        aws s3 cp "/tmp/nyc-tlc/${category}_tripdata_${YEAR}-${MONTH}.csv" "s3://$DATA_BUCKET/stg/tlc/${category}_trip/"
-    done
+    # csv https download link is unavailable from May 13, 2022, they are changed to parquet files. so following cli does not work anymore.
+    # wget "https://nyc-tlc.s3.amazonaws.com/trip data/${category}_tripdata_${YEAR}-${MONTH}.csv" -P "/tmp/nyc-tlc/"
+    # although s3 provide csv backup files as following:
+    # aws s3 cp "s3://nyc-tlc/csv_backup/${category}_tripdata_${YEAR}-${MONTH}.csv" "/tmp/nyc-tlc/"
+    # but for china region, the nyc-tlc bucket can not access anonymously
+    # so, we select a csv file source from github:
+    wget --tries=10 --timeout=10 "https://github.com/bluishglc/nyc-tlc-data/releases/download/v1.0/${category}_tripdata_${YEAR}-${MONTH}.csv.gz" -P "/tmp/nyc-tlc/"
+    gzip -d "/tmp/nyc-tlc/${category}_tripdata_${YEAR}-${MONTH}.csv.gz"
+    aws s3 cp "/tmp/nyc-tlc/${category}_tripdata_${YEAR}-${MONTH}.csv" "s3://$DATA_BUCKET/stg/tlc/${category}_trip/"
+done
 }
 
 feedGeoData() {
