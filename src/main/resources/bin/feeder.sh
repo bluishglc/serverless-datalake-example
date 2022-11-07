@@ -24,10 +24,23 @@ feedTlcData() {
     # wget "https://nyc-tlc.s3.amazonaws.com/trip data/${category}_tripdata_${YEAR}-${MONTH}.csv" -P "/tmp/nyc-tlc/"
     # although s3 provide csv backup files as following:
     # aws s3 cp "s3://nyc-tlc/csv_backup/${category}_tripdata_${YEAR}-${MONTH}.csv" "/tmp/nyc-tlc/"
-    # but for china region, the nyc-tlc bucket can not access anonymously
+    # however, this public bucket does NOT support anonymous access, so for a china region account, it is still inaccessible!
     # so, we select a csv file source from github:
-    wget --tries=10 --timeout=10 "https://github.com/bluishglc/nyc-tlc-data/releases/download/v1.0/${category}_tripdata_${YEAR}-${MONTH}.csv.gz" -P "/tmp/nyc-tlc/"
-    gzip -d "/tmp/nyc-tlc/${category}_tripdata_${YEAR}-${MONTH}.csv.gz"
+    # wget --tries=10 --timeout=10 "https://github.com/bluishglc/nyc-tlc-data/releases/download/v1.0/${category}_tripdata_${YEAR}-${MONTH}.csv.gz" -P "/tmp/nyc-tlc/"
+    # gzip -d "/tmp/nyc-tlc/${category}_tripdata_${YEAR}-${MONTH}.csv.gz"
+
+    if [ "$REGION" = "cn-north-1" -o "$REGION" = "cn-northwest-1" ]; then
+        export AWS_ACCESS_KEY_ID="$NYC_TLC_ACCESS_KEY_ID"
+        export AWS_SECRET_ACCESS_KEY="$NYC_TLC_SECRET_ACCESS_KEY"
+        export AWS_DEFAULT_REGION="us-east-1"
+        aws s3 cp "s3://nyc-tlc/csv_backup/${category}_tripdata_${YEAR}-${MONTH}.csv" "/tmp/nyc-tlc/"
+        unset AWS_ACCESS_KEY_ID
+        unset AWS_SECRET_ACCESS_KEY
+        unset AWS_DEFAULT_REGION
+    else
+        aws s3 cp "s3://nyc-tlc/csv_backup/${category}_tripdata_${YEAR}-${MONTH}.csv" "/tmp/nyc-tlc/"
+    fi
+
     aws s3 cp "/tmp/nyc-tlc/${category}_tripdata_${YEAR}-${MONTH}.csv" "s3://$DATA_BUCKET/stg/tlc/${category}_trip/"
 done
 }

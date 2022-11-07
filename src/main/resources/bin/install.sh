@@ -50,6 +50,8 @@ replaceEnvVars() {
     sed -i "s|APP_BUCKET=.*|APP_BUCKET=$APP_BUCKET|g" "$CONSTANTS_FILE"
     sed -i "s|DATA_BUCKET=.*|DATA_BUCKET=$DATA_BUCKET|g" "$CONSTANTS_FILE"
     sed -i "s|AIRFLOW_DAGS_HOME=.*|AIRFLOW_DAGS_HOME=$AIRFLOW_DAGS_HOME|g" "$CONSTANTS_FILE"
+    sed -i "s|NYC_TLC_ACCESS_KEY_ID=.*|NYC_TLC_ACCESS_KEY_ID=$NYC_TLC_ACCESS_KEY_ID|g" "$CONSTANTS_FILE"
+    sed -i "s|NYC_TLC_SECRET_ACCESS_KEY=.*|NYC_TLC_SECRET_ACCESS_KEY=$NYC_TLC_SECRET_ACCESS_KEY|g" "$CONSTANTS_FILE"
 
     find "$SDL_HOME/sql/" -type f -name "*.sql" -print0 | xargs -0 sed -i "s|s3://[a-zA-Z0-9_-]*/|s3://$DATA_BUCKET/|g"
 }
@@ -125,8 +127,8 @@ parseArgs() {
         exit 0
     fi
 
-    optString="r:a:d:h:i:k"
-    longOptString="region:,app-bucket:,data-bucket:,airflow-dags-home:,access-key-id:,secret-access-key:"
+    optString="r:a:d:h:i:k:n:t"
+    longOptString="region:,app-bucket:,data-bucket:,airflow-dags-home:,access-key-id:,secret-access-key:,nyc-tlc-access-key-id:,nyc-tlc-secret-access-key:"
 
     # IMPORTANT!! -o option can not be omitted, even there are no any short options!
     # otherwise, parsing will go wrong!
@@ -162,6 +164,14 @@ parseArgs() {
                 ;;
             -k|--secret-access-key)
                 SECRET_ACCESS_KEY="${2}"
+                shift 2
+                ;;
+            -n|--nyc-tlc-access-key-id)
+                NYC_TLC_ACCESS_KEY_ID="${2}"
+                shift 2
+                ;;
+            -t|--nyc-tlc-secret-access-key)
+                NYC_TLC_SECRET_ACCESS_KEY="${2}"
                 shift 2
                 ;;
             --) # No more arguments
