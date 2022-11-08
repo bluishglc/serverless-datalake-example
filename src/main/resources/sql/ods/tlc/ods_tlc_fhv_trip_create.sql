@@ -5,7 +5,8 @@ create table if not exists ods.tlc_fhv_trip(
   `dropoff_datetime` string,
   `pulocationid` bigint,
   `dolocationid` bigint,
-  `sr_flag` string
+  `sr_flag` string,
+  `affiliated_base_number` string
 )
 partitioned by (year string, month string)
 stored as parquet

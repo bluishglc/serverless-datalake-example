@@ -20,14 +20,14 @@ feedTlcData() {
     aws s3 rm "s3://$DATA_BUCKET/stg/tlc" --recursive
 
     for category in yellow green fhv fhvhv; do
-    # csv https download link is unavailable from May 13, 2022, they are changed to parquet files. so following cli does not work anymore.
-    # wget "https://nyc-tlc.s3.amazonaws.com/trip data/${category}_tripdata_${YEAR}-${MONTH}.csv" -P "/tmp/nyc-tlc/"
-    # although s3 provide csv backup files as following:
-    # aws s3 cp "s3://nyc-tlc/csv_backup/${category}_tripdata_${YEAR}-${MONTH}.csv" "/tmp/nyc-tlc/"
-    # however, this public bucket does NOT support anonymous access, so for a china region account, it is still inaccessible!
-    # so, we select a csv file source from github:
-    # wget --tries=10 --timeout=10 "https://github.com/bluishglc/nyc-tlc-data/releases/download/v1.0/${category}_tripdata_${YEAR}-${MONTH}.csv.gz" -P "/tmp/nyc-tlc/"
-    # gzip -d "/tmp/nyc-tlc/${category}_tripdata_${YEAR}-${MONTH}.csv.gz"
+#     csv https download link is unavailable from May 13, 2022, they are changed to parquet files. so following cli does not work anymore.
+#     wget "https://nyc-tlc.s3.amazonaws.com/trip data/${category}_tripdata_${YEAR}-${MONTH}.csv" -P "/tmp/nyc-tlc/"
+#     although s3 provide csv backup files as following:
+#     aws s3 cp "s3://nyc-tlc/csv_backup/${category}_tripdata_${YEAR}-${MONTH}.csv" "/tmp/nyc-tlc/"
+#     however, this public bucket does NOT support anonymous access, so for a china region account, it is still inaccessible!
+#     so, we select a csv file source from github:
+#     wget --tries=10 --timeout=10 "https://github.com/bluishglc/nyc-tlc-data/releases/download/v1.0/${category}_tripdata_${YEAR}-${MONTH}.csv.gz" -P "/tmp/nyc-tlc/"
+#     gzip -d "/tmp/nyc-tlc/${category}_tripdata_${YEAR}-${MONTH}.csv.gz"
 
     if [ "$REGION" = "cn-north-1" -o "$REGION" = "cn-northwest-1" ]; then
         export AWS_ACCESS_KEY_ID="$NYC_TLC_ACCESS_KEY_ID"
