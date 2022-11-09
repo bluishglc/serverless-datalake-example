@@ -21,14 +21,22 @@ mvn clean package
 You have 2 ways to get installer package, one is building from source codes just as step above, the other one is downloading directly:
 
 ```bash
-wget https://github.com/bluishglc/serverless-datalake-example/releases/download/v1.0/serverless-datalake-example-1.0.zip
+wget --tries=10 --timeout=10 https://github.com/bluishglc/serverless-datalake-example/releases/download/v1.0/serverless-datalake-example-1.0.zip
 unzip serverless-datalake-example-1.0.zip
 ```
 
 then run install command:
 
 ```bash
-./serverless-datalake-example-1.0/bin/install.sh --region <your-aws-region> --app-bucket <your-app-bucket-name> --data-bucket <your-data-bucket-name> --airflow-dags-home s3://<your-airflow-dags-path> --access-key-id '<your-access-key-id>' --secret-access-key '<your-secret-access-key>' --nyc-tlc-access-key-id '<your-global-account-access-key-id>' --nyc-tlc-secret-access-key '<your-global-account-secret-access-key>'
+./serverless-datalake-example-1.0/bin/install.sh \
+    --region <your-aws-region> \
+    --app-bucket <your-app-bucket-name> \
+    --data-bucket <your-data-bucket-name> \
+    --airflow-dags-home s3://<your-airflow-dags-path> \
+    --access-key-id '<your-access-key-id>' \
+    --secret-access-key '<your-secret-access-key>' \
+    --nyc-tlc-access-key-id '<your-global-account-access-key-id>' \
+    --nyc-tlc-secret-access-key '<your-global-account-secret-access-key>'
 ```
 
 Note: the parameters of cli will overwrite values in prd/dev properties files.
@@ -36,9 +44,9 @@ Note: the parameters of cli will overwrite values in prd/dev properties files.
 ## 3. Create Data Repo (China Region Only)
 
 Because the nyc-tlc data sets are hosted on global S3, they are unreachable via china account AKSK, so we need download
-partial csv files to local first, then upload to China S3. Following cli will download 
+partial csv files to local first, then upload to China S3. Following cli will download
 
-## 4. Init 
+## 4. Init
 
 This step will create crawlers, jobs, databases and tables.
 
@@ -63,7 +71,7 @@ When 1.0 relase, it works well on cn and us regions, however, recently, if run o
 Exception in User Class: java.io.IOException : com.amazon.ws.emr.hadoop.fs.shaded.com.amazonaws.services.s3.model.AmazonS3Exception: Access Denied (Service: Amazon S3; Status Code: 403; Error Code: AccessDenied ....
 ```
 
-It is not caused by IAM or S3 policies, I also checked VPC S3 endpoint, no any problems, so by now, we have not find root cause. 
+It is not caused by IAM or S3 policies, I also checked VPC S3 endpoint, no any problems, so by now, we have not find root cause.
 
 
 ## 7. Updates
