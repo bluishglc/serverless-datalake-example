@@ -21,14 +21,22 @@ mvn clean package
 You have 2 ways to get installer package, one is building from source codes just as step above, the other one is downloading directly:
 
 ```bash
-wget https://github.com/bluishglc/serverless-datalake-example/releases/download/v1.0/serverless-datalake-example-1.0.zip
+wget --tries=10 --timeout=10 https://github.com/bluishglc/serverless-datalake-example/releases/download/v1.0/serverless-datalake-example-1.0.zip
 unzip serverless-datalake-example-1.0.zip
 ```
 
 then run install command:
 
 ```bash
-./serverless-datalake-example-1.0/bin/install.sh --region <your-aws-region> --app-bucket <your-app-bucket-name> --data-bucket <your-data-bucket-name> --airflow-dags-home s3://<your-airflow-dags-path> --access-key-id '<your-access-key-id>' --secret-access-key '<your-secret-access-key>' --nyc-tlc-access-key-id '<your-global-account-access-key-id>' --nyc-tlc-secret-access-key '<your-global-account-secret-access-key>'
+./serverless-datalake-example-1.0/bin/install.sh \
+    --region <your-aws-region> \
+    --app-bucket <your-app-bucket-name> \
+    --data-bucket <your-data-bucket-name> \
+    --airflow-dags-home s3://<your-airflow-dags-path> \
+    --access-key-id '<your-access-key-id>' \
+    --secret-access-key '<your-secret-access-key>' \
+    --nyc-tlc-access-key-id '<your-global-account-access-key-id>' \
+    --nyc-tlc-secret-access-key '<your-global-account-secret-access-key>'
 ```
 
 Note: the parameters of cli will overwrite values in prd/dev properties files.

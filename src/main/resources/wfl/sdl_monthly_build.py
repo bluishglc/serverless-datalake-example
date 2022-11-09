@@ -5,6 +5,9 @@ from airflow import DAG
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.contrib.operators.ssh_operator import SSHOperator
 
+import datahub.emitter.mce_builder as builder
+from datahub_provider.operators.datahub import DatahubEmitterOperator
+
 default_args = {
     'owner': 'sdl',
     'depends_on_past': False,
@@ -78,6 +81,19 @@ ods_geo_taxi_zone_insert = SSHOperator(
     task_id='ods_geo_taxi_zone_insert',
     command=ods_geo_taxi_zone_insert_cmd,
     dag=dag
+)
+
+ods_geo_taxi_zone_lineage = DatahubEmitterOperator(
+    task_id="ods_geo_taxi_zone_lineage",
+    datahub_conn_id="datahub_kafka_default",
+    mces=[
+        builder.make_lineage_mce(
+            upstream_urns=[
+                builder.make_dataset_urn("glue", "stg.geo_taxi_zone")
+            ],
+            downstream_urn=builder.make_dataset_urn("glue", "ods.geo_taxi_zone"),
+        )
+    ],
 )
 
 # ods_tlc
