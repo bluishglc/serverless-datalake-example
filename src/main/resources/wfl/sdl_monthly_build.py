@@ -2,6 +2,7 @@ from datetime import datetime
 from datetime import timedelta
 
 from airflow import DAG
+from airflow.utils.task_group import TaskGroup
 from airflow.operators.dummy_operator import DummyOperator
 from airflow.contrib.operators.ssh_operator import SSHOperator
 
@@ -17,294 +18,522 @@ default_args = {
     'retry_delay': timedelta(minutes=1),
 }
 
-dag = DAG(
-    'sdl_monthly_build',
-    default_args=default_args,
-    description='monthly build for serverless datalake',
-    schedule_interval='@monthly',
-)
+with DAG(
+        'sdl_monthly_build',
+        default_args=default_args,
+        description='monthly build for serverless datalake',
+        schedule_interval='@monthly',
+) as dag:
 
-# stg_pub
+    # stg_pub
 
-stg_pub_data_feed_cmd = """
-sdl-feeder feed-pub-data
-"""
+    stg_pub_data_feed_cmd = """
+        sdl-feeder feed-pub-data
+    """
 
-stg_pub_data_feed = SSHOperator(
-    ssh_conn_id='ssh_to_client',
-    task_id='stg_pub_data_feed',
-    command=stg_pub_data_feed_cmd,
-    dag=dag
-)
+    stg_pub_data_feed = SSHOperator(
+        ssh_conn_id='ssh_to_client',
+        task_id='stg_pub_data_feed',
+        command=stg_pub_data_feed_cmd,
+        dag=dag
+    )
 
-# stg_geo
+    # stg_geo
 
-stg_geo_data_feed_cmd = """
-sdl-feeder feed-geo-data \
-    --year {{execution_date.year}} \
-    --month {{execution_date.month}}
-"""
+    stg_geo_data_feed_cmd = """
+        sdl-feeder feed-geo-data \
+            --year {{execution_date.year}} \
+            --month {{execution_date.month}}
+    """
 
-stg_geo_data_feed = SSHOperator(
-    ssh_conn_id='ssh_to_client',
-    task_id='stg_geo_data_feed',
-    command=stg_geo_data_feed_cmd,
-    dag=dag
-)
+    stg_geo_data_feed = SSHOperator(
+        ssh_conn_id='ssh_to_client',
+        task_id='stg_geo_data_feed',
+        command=stg_geo_data_feed_cmd,
+        dag=dag
+    )
 
-# stg_tlc
+    # stg_tlc
 
-stg_tlc_data_feed_cmd = """
-sdl-feeder feed-tlc-data \
-    --year {{execution_date.year}} \
-    --month {{execution_date.month}}
-"""
+    stg_tlc_data_feed_cmd = """
+        sdl-feeder feed-tlc-data \
+            --year {{execution_date.year}} \
+            --month {{execution_date.month}}
+    """
 
-stg_tlc_data_feed = SSHOperator(
-    ssh_conn_id='ssh_to_client',
-    task_id='stg_tlc_data_feed',
-    command=stg_tlc_data_feed_cmd,
-    dag=dag
-)
+    stg_tlc_data_feed = SSHOperator(
+        ssh_conn_id='ssh_to_client',
+        task_id='stg_tlc_data_feed',
+        command=stg_tlc_data_feed_cmd,
+        dag=dag
+    )
 
-# ods_geo
+    # ods_geo
 
-ods_geo_taxi_zone_insert_cmd = """
-sdl-job start \
-    --job-name ods_geo_taxi_zone_insert \
-    --year {{execution_date.year}} \
-    --month {{execution_date.month}}
-"""
+    with TaskGroup(group_id="ods_geo_taxi_zone_insert") as ods_geo_taxi_zone_insert:
 
-ods_geo_taxi_zone_insert = SSHOperator(
-    ssh_conn_id='ssh_to_client',
-    task_id='ods_geo_taxi_zone_insert',
-    command=ods_geo_taxi_zone_insert_cmd,
-    dag=dag
-)
+        ods_geo_taxi_zone_insert_cmd = """
+            sdl-job start \
+                --job-name ods_geo_taxi_zone_insert \
+                --year {{execution_date.year}} \
+                --month {{execution_date.month}}
+        """
 
-ods_geo_taxi_zone_lineage = DatahubEmitterOperator(
-    task_id="ods_geo_taxi_zone_lineage",
-    datahub_conn_id="datahub_kafka_default",
-    mces=[
-        builder.make_lineage_mce(
-            upstream_urns=[
-                builder.make_dataset_urn("glue", "stg.geo_taxi_zone")
-            ],
-            downstream_urn=builder.make_dataset_urn("glue", "ods.geo_taxi_zone"),
+        ods_geo_taxi_zone_insert_job = SSHOperator(
+            ssh_conn_id='ssh_to_client',
+            task_id='ods_geo_taxi_zone_insert_job',
+            command=ods_geo_taxi_zone_insert_cmd,
+            dag=dag
         )
-    ],
-)
 
-# ods_tlc
+        ods_geo_taxi_zone_insert_lineage = DatahubEmitterOperator(
+            task_id="ods_geo_taxi_zone_insert_lineage",
+            datahub_conn_id="datahub_rest_default",
+            mces=[
+                builder.make_lineage_mce(
+                    upstream_urns=[
+                        builder.make_dataset_urn("airflow", "stg.geo_taxi_zone")
+                    ],
+                    downstream_urn=builder.make_dataset_urn("airflow", "ods.geo_taxi_zone"),
+                )
+            ]
+        )
 
-ods_tlc_yellow_trip_insert_cmd = """
-sdl-job start \
-    --job-name ods_tlc_yellow_trip_insert \
-    --year {{execution_date.year}} \
-    --month {{execution_date.month}}
-"""
+        ods_geo_taxi_zone_insert_job >> ods_geo_taxi_zone_insert_lineage
 
-ods_tlc_yellow_trip_insert = SSHOperator(
-    ssh_conn_id='ssh_to_client',
-    task_id='ods_tlc_yellow_trip_insert',
-    command=ods_tlc_yellow_trip_insert_cmd,
-    dag=dag
-)
+    # ods_tlc
 
-ods_tlc_green_trip_insert_cmd = """
-sdl-job start \
-    --job-name ods_tlc_green_trip_insert \
-    --year {{execution_date.year}} \
-    --month {{execution_date.month}}
-"""
+    with TaskGroup(group_id="ods_tlc_yellow_trip_insert") as ods_tlc_yellow_trip_insert:
 
-ods_tlc_green_trip_insert = SSHOperator(
-    ssh_conn_id='ssh_to_client',
-    task_id='ods_tlc_green_trip_insert',
-    command=ods_tlc_green_trip_insert_cmd,
-    dag=dag
-)
+        ods_tlc_yellow_trip_insert_cmd = """
+            sdl-job start \
+                --job-name ods_tlc_yellow_trip_insert \
+                --year {{execution_date.year}} \
+                --month {{execution_date.month}}
+        """
 
-ods_tlc_fhv_trip_insert_cmd = """
-sdl-job start \
-    --job-name ods_tlc_fhv_trip_insert \
-    --year {{execution_date.year}} \
-    --month {{execution_date.month}}
-"""
+        ods_tlc_yellow_trip_insert_job = SSHOperator(
+            ssh_conn_id='ssh_to_client',
+            task_id='ods_tlc_yellow_trip_insert_job',
+            command=ods_tlc_yellow_trip_insert_cmd,
+            dag=dag
+        )
 
-ods_tlc_fhv_trip_insert = SSHOperator(
-    ssh_conn_id='ssh_to_client',
-    task_id='ods_tlc_fhv_trip_insert',
-    command=ods_tlc_fhv_trip_insert_cmd,
-    dag=dag
-)
+        ods_tlc_yellow_trip_insert_lineage = DatahubEmitterOperator(
+            task_id="ods_tlc_yellow_trip_insert_lineage",
+            datahub_conn_id="datahub_rest_default",
+            mces=[
+                builder.make_lineage_mce(
+                    upstream_urns=[
+                        builder.make_dataset_urn("airflow", "stg.tlc_yellow_trip")
+                    ],
+                    downstream_urn=builder.make_dataset_urn("airflow", "ods.tlc_yellow_trip"),
+                )
+            ]
+        )
 
-ods_tlc_fhvhv_trip_insert_cmd = """
-sdl-job start \
-    --job-name ods_tlc_fhvhv_trip_insert \
-    --year {{execution_date.year}} \
-    --month {{execution_date.month}}
-"""
+        ods_tlc_yellow_trip_insert_job >> ods_tlc_yellow_trip_insert_lineage
 
-ods_tlc_fhvhv_trip_insert = SSHOperator(
-    ssh_conn_id='ssh_to_client',
-    task_id='ods_tlc_fhvhv_trip_insert',
-    command=ods_tlc_fhvhv_trip_insert_cmd,
-    dag=dag
-)
+    with TaskGroup(group_id="ods_tlc_green_trip_insert") as ods_tlc_green_trip_insert:
 
-# dwh_geo
+        ods_tlc_green_trip_insert_cmd = """
+            sdl-job start \
+                --job-name ods_tlc_green_trip_insert \
+                --year {{execution_date.year}} \
+                --month {{execution_date.month}}
+        """
 
-dwh_geo_taxi_zone_upsert_cmd = """
-sdl-job start \
-    --job-name dwh_geo_taxi_zone_upsert \
-    --year {{execution_date.year}} \
-    --month {{execution_date.month}}
-"""
+        ods_tlc_green_trip_insert_job = SSHOperator(
+            ssh_conn_id='ssh_to_client',
+            task_id='ods_tlc_green_trip_insert_job',
+            command=ods_tlc_green_trip_insert_cmd,
+            dag=dag
+        )
 
-dwh_geo_taxi_zone_upsert = SSHOperator(
-    ssh_conn_id='ssh_to_client',
-    task_id='dwh_geo_taxi_zone_upsert',
-    command=dwh_geo_taxi_zone_upsert_cmd,
-    dag=dag
-)
+        ods_tlc_green_trip_insert_lineage = DatahubEmitterOperator(
+            task_id="ods_tlc_green_trip_insert_lineage",
+            datahub_conn_id="datahub_rest_default",
+            mces=[
+                builder.make_lineage_mce(
+                    upstream_urns=[
+                        builder.make_dataset_urn("airflow", "stg.tlc_green_trip")
+                    ],
+                    downstream_urn=builder.make_dataset_urn("airflow", "ods.tlc_green_trip"),
+                )
+            ]
+        )
 
-# dwh_tlc
+        ods_tlc_green_trip_insert_job >> ods_tlc_green_trip_insert_lineage
 
-dwh_tlc_yellow_trip_insert_cmd = """
-sdl-job start \
-    --job-name dwh_tlc_yellow_trip_insert \
-    --year {{execution_date.year}} \
-    --month {{execution_date.month}}
-"""
+    with TaskGroup(group_id="ods_tlc_fhv_trip_insert") as ods_tlc_fhv_trip_insert:
 
-dwh_tlc_yellow_trip_insert = SSHOperator(
-    ssh_conn_id='ssh_to_client',
-    task_id='dwh_tlc_yellow_trip_insert',
-    command=dwh_tlc_yellow_trip_insert_cmd,
-    dag=dag
-)
+        ods_tlc_fhv_trip_insert_cmd = """
+            sdl-job start \
+                --job-name ods_tlc_fhv_trip_insert \
+                --year {{execution_date.year}} \
+                --month {{execution_date.month}}
+        """
 
-dwh_tlc_green_trip_insert_cmd = """
-sdl-job start \
-    --job-name dwh_tlc_green_trip_insert \
-    --year {{execution_date.year}} \
-    --month {{execution_date.month}}
-"""
+        ods_tlc_fhv_trip_insert_job = SSHOperator(
+            ssh_conn_id='ssh_to_client',
+            task_id='ods_tlc_fhv_trip_insert_job',
+            command=ods_tlc_fhv_trip_insert_cmd,
+            dag=dag
+        )
 
-dwh_tlc_green_trip_insert = SSHOperator(
-    ssh_conn_id='ssh_to_client',
-    task_id='dwh_tlc_green_trip_insert',
-    command=dwh_tlc_green_trip_insert_cmd,
-    dag=dag
-)
+        ods_tlc_fhv_trip_insert_lineage = DatahubEmitterOperator(
+            task_id="ods_tlc_fhv_trip_insert_lineage",
+            datahub_conn_id="datahub_rest_default",
+            mces=[
+                builder.make_lineage_mce(
+                    upstream_urns=[
+                        builder.make_dataset_urn("airflow", "stg.tlc_fhv_trip")
+                    ],
+                    downstream_urn=builder.make_dataset_urn("airflow", "ods.tlc_fhv_trip"),
+                )
+            ]
+        )
 
-dwh_tlc_fhv_trip_insert_cmd = """
-sdl-job start \
-    --job-name dwh_tlc_fhv_trip_insert \
-    --year {{execution_date.year}} \
-    --month {{execution_date.month}}
-"""
+        ods_tlc_fhv_trip_insert_job >> ods_tlc_fhv_trip_insert_lineage
 
-dwh_tlc_fhv_trip_insert = SSHOperator(
-    ssh_conn_id='ssh_to_client',
-    task_id='dwh_tlc_fhv_trip_insert',
-    command=dwh_tlc_fhv_trip_insert_cmd,
-    dag=dag
-)
+    with TaskGroup(group_id="ods_tlc_fhvhv_trip_insert") as ods_tlc_fhvhv_trip_insert:
 
-dwh_tlc_fhvhv_trip_insert_cmd = """
-sdl-job start \
-    --job-name dwh_tlc_fhvhv_trip_insert \
-    --year {{execution_date.year}} \
-    --month {{execution_date.month}}
-"""
+        ods_tlc_fhvhv_trip_insert_cmd = """
+            sdl-job start \
+                --job-name ods_tlc_fhvhv_trip_insert \
+                --year {{execution_date.year}} \
+                --month {{execution_date.month}}
+        """
 
-dwh_tlc_fhvhv_trip_insert = SSHOperator(
-    ssh_conn_id='ssh_to_client',
-    task_id='dwh_tlc_fhvhv_trip_insert',
-    command=dwh_tlc_fhvhv_trip_insert_cmd,
-    dag=dag
-)
+        ods_tlc_fhvhv_trip_insert_job = SSHOperator(
+            ssh_conn_id='ssh_to_client',
+            task_id='ods_tlc_fhvhv_trip_insert_job',
+            command=ods_tlc_fhvhv_trip_insert_cmd,
+            dag=dag
+        )
 
-# dmt_pub
+        ods_tlc_fhvhv_trip_insert_lineage = DatahubEmitterOperator(
+            task_id="ods_tlc_fhvhv_trip_insert_lineage",
+            datahub_conn_id="datahub_rest_default",
+            mces=[
+                builder.make_lineage_mce(
+                    upstream_urns=[
+                        builder.make_dataset_urn("airflow", "stg.tlc_fhvhv_trip")
+                    ],
+                    downstream_urn=builder.make_dataset_urn("airflow", "ods.tlc_fhvhv_trip"),
+                )
+            ]
+        )
 
-dmt_pub_dim_date_overwrite_cmd = """
-sdl-job start \
-    --job-name dmt_pub_dim_date_overwrite \
-    --year {{execution_date.year}} \
-    --month {{execution_date.month}}
-"""
+        ods_tlc_fhvhv_trip_insert_job >> ods_tlc_fhvhv_trip_insert_lineage
 
-dmt_pub_dim_date_overwrite = SSHOperator(
-    ssh_conn_id='ssh_to_client',
-    task_id='dmt_pub_dim_date_overwrite',
-    command=dmt_pub_dim_date_overwrite_cmd,
-    dag=dag
-)
+    # dwh_geo
 
-# dmt_geo
+    with TaskGroup(group_id="dwh_geo_taxi_zone_upsert") as dwh_geo_taxi_zone_upsert:
 
-dmt_geo_dim_taxi_zone_upsert_cmd = """
-sdl-job start \
-    --job-name dmt_geo_dim_taxi_zone_upsert \
-    --year {{execution_date.year}} \
-    --month {{execution_date.month}}
-"""
+        dwh_geo_taxi_zone_upsert_cmd = """
+        sdl-job start \
+            --job-name dwh_geo_taxi_zone_upsert \
+            --year {{execution_date.year}} \
+            --month {{execution_date.month}}
+        """
 
-dmt_geo_dim_taxi_zone_upsert = SSHOperator(
-    ssh_conn_id='ssh_to_client',
-    task_id='dmt_geo_dim_taxi_zone_upsert',
-    command=dmt_geo_dim_taxi_zone_upsert_cmd,
-    dag=dag
-)
+        dwh_geo_taxi_zone_upsert_job = SSHOperator(
+            ssh_conn_id='ssh_to_client',
+            task_id='dwh_geo_taxi_zone_upsert_job',
+            command=dwh_geo_taxi_zone_upsert_cmd,
+            dag=dag
+        )
 
-# dmt_tlc
+        dwh_geo_taxi_zone_upsert_lineage = DatahubEmitterOperator(
+            task_id="dwh_geo_taxi_zone_upsert_lineage",
+            datahub_conn_id="datahub_rest_default",
+            mces=[
+                builder.make_lineage_mce(
+                    upstream_urns=[
+                        builder.make_dataset_urn("airflow", "ods.geo_taxi_zone")
+                    ],
+                    downstream_urn=builder.make_dataset_urn("airflow", "dwh.geo_taxi_zone"),
+                )
+            ]
+        )
 
-dmt_tlc_union_trip_insert_cmd = """
-sdl-job start \
-    --job-name dmt_tlc_union_trip_insert \
-    --year {{execution_date.year}} \
-    --month {{execution_date.month}}
-"""
+        dwh_geo_taxi_zone_upsert_job >> dwh_geo_taxi_zone_upsert_lineage
 
-dmt_tlc_union_trip_insert = SSHOperator(
-    ssh_conn_id='ssh_to_client',
-    task_id='dmt_tlc_union_trip_insert',
-    command=dmt_tlc_union_trip_insert_cmd,
-    dag=dag
-)
+        # dwh_tlc
 
-dmt_tlc_wide_trip_insert_cmd = """
-sdl-job start \
-    --job-name dmt_tlc_wide_trip_insert \
-    --year {{execution_date.year}} \
-    --month {{execution_date.month}}
-"""
+    with TaskGroup(group_id="dwh_tlc_yellow_trip_insert") as dwh_tlc_yellow_trip_insert:
 
-dmt_tlc_wide_trip_insert = SSHOperator(
-    ssh_conn_id='ssh_to_client',
-    task_id='dmt_tlc_wide_trip_insert',
-    command=dmt_tlc_wide_trip_insert_cmd,
-    dag=dag
-)
+        dwh_tlc_yellow_trip_insert_cmd = """
+        sdl-job start \
+            --job-name dwh_tlc_yellow_trip_insert \
+            --year {{execution_date.year}} \
+            --month {{execution_date.month}}
+        """
 
-start = DummyOperator(task_id='start', dag=dag)
-end = DummyOperator(task_id='end', dag=dag)
+        dwh_tlc_yellow_trip_insert_job = SSHOperator(
+            ssh_conn_id='ssh_to_client',
+            task_id='dwh_tlc_yellow_trip_insert_job',
+            command=dwh_tlc_yellow_trip_insert_cmd,
+            dag=dag
+        )
 
-stg_pub_to_dmt_pub = DummyOperator(task_id='stg_pub_to_dmt_pub', dag=dag)
+        dwh_tlc_yellow_trip_insert_lineage = DatahubEmitterOperator(
+            task_id="dwh_tlc_yellow_trip_insert_lineage",
+            datahub_conn_id="datahub_rest_default",
+            mces=[
+                builder.make_lineage_mce(
+                    upstream_urns=[
+                        builder.make_dataset_urn("airflow", "ods.tlc_yellow_trip")
+                    ],
+                    downstream_urn=builder.make_dataset_urn("airflow", "dwh.tlc_yellow_trip"),
+                )
+            ]
+        )
 
-stg_geo_to_ods_geo = DummyOperator(task_id='stg_geo_to_ods_geo', dag=dag)
-ods_geo_to_dwh_geo = DummyOperator(task_id='ods_geo_to_dwh_geo', dag=dag)
-dwh_geo_to_dmt_geo = DummyOperator(task_id='dwh_geo_to_dmt_geo', dag=dag)
+        dwh_tlc_yellow_trip_insert_job >> dwh_tlc_yellow_trip_insert_lineage
 
-stg_tlc_to_ods_tlc = DummyOperator(task_id='stg_tlc_to_ods_tlc', dag=dag)
-ods_tlc_to_dwh_tlc = DummyOperator(task_id='ods_tlc_to_dwh_tlc', dag=dag)
-dwh_tlc_to_dmt_tlc = DummyOperator(task_id='dwh_tlc_to_dmt_tlc', dag=dag)
+    with TaskGroup(group_id="dwh_tlc_green_trip_insert") as dwh_tlc_green_trip_insert:
 
-start >> stg_pub_data_feed >> stg_pub_to_dmt_pub >> dmt_pub_dim_date_overwrite >> dmt_tlc_wide_trip_insert >> end
-start >> stg_geo_data_feed >> stg_geo_to_ods_geo >> ods_geo_taxi_zone_insert >> ods_geo_to_dwh_geo >> dwh_geo_taxi_zone_upsert >> dwh_geo_to_dmt_geo >> dmt_geo_dim_taxi_zone_upsert >> dmt_tlc_wide_trip_insert >> end
-start >> stg_tlc_data_feed >> stg_tlc_to_ods_tlc >> [ods_tlc_yellow_trip_insert, ods_tlc_green_trip_insert, ods_tlc_fhv_trip_insert, ods_tlc_fhvhv_trip_insert] >> ods_tlc_to_dwh_tlc >> [dwh_tlc_yellow_trip_insert, dwh_tlc_green_trip_insert, dwh_tlc_fhv_trip_insert, dwh_tlc_fhvhv_trip_insert] >> dwh_tlc_to_dmt_tlc >> dmt_tlc_union_trip_insert >> dmt_tlc_wide_trip_insert >> end
+        dwh_tlc_green_trip_insert_cmd = """
+            sdl-job start \
+                --job-name dwh_tlc_green_trip_insert \
+                --year {{execution_date.year}} \
+                --month {{execution_date.month}}
+        """
 
+        dwh_tlc_green_trip_insert_job = SSHOperator(
+            ssh_conn_id='ssh_to_client',
+            task_id='dwh_tlc_green_trip_insert_job',
+            command=dwh_tlc_green_trip_insert_cmd,
+            dag=dag
+        )
 
+        dwh_tlc_green_trip_insert_lineage = DatahubEmitterOperator(
+            task_id="dwh_tlc_green_trip_insert_lineage",
+            datahub_conn_id="datahub_rest_default",
+            mces=[
+                builder.make_lineage_mce(
+                    upstream_urns=[
+                        builder.make_dataset_urn("airflow", "ods.tlc_green_trip")
+                    ],
+                    downstream_urn=builder.make_dataset_urn("airflow", "dwh.tlc_green_trip"),
+                )
+            ]
+        )
+
+        dwh_tlc_green_trip_insert_job >> dwh_tlc_green_trip_insert_lineage
+
+    with TaskGroup(group_id="dwh_tlc_fhv_trip_insert") as dwh_tlc_fhv_trip_insert:
+
+        dwh_tlc_fhv_trip_insert_cmd = """
+            sdl-job start \
+                --job-name dwh_tlc_fhv_trip_insert \
+                --year {{execution_date.year}} \
+                --month {{execution_date.month}}
+        """
+
+        dwh_tlc_fhv_trip_insert_job = SSHOperator(
+            ssh_conn_id='ssh_to_client',
+            task_id='dwh_tlc_fhv_trip_insert_job',
+            command=dwh_tlc_fhv_trip_insert_cmd,
+            dag=dag
+        )
+
+        dwh_tlc_fhv_trip_insert_lineage = DatahubEmitterOperator(
+            task_id="dwh_tlc_fhv_trip_insert_lineage",
+            datahub_conn_id="datahub_rest_default",
+            mces=[
+                builder.make_lineage_mce(
+                    upstream_urns=[
+                        builder.make_dataset_urn("airflow", "ods.tlc_fhv_trip")
+                    ],
+                    downstream_urn=builder.make_dataset_urn("airflow", "dwh.tlc_fhv_trip"),
+                )
+            ]
+        )
+
+        dwh_tlc_fhv_trip_insert_job >> dwh_tlc_fhv_trip_insert_lineage
+
+    with TaskGroup(group_id="dwh_tlc_fhvhv_trip_insert") as dwh_tlc_fhvhv_trip_insert:
+
+        dwh_tlc_fhvhv_trip_insert_cmd = """
+            sdl-job start \
+                --job-name dwh_tlc_fhvhv_trip_insert \
+                --year {{execution_date.year}} \
+                --month {{execution_date.month}}
+        """
+
+        dwh_tlc_fhvhv_trip_insert_job = SSHOperator(
+            ssh_conn_id='ssh_to_client',
+            task_id='dwh_tlc_fhvhv_trip_insert_job',
+            command=dwh_tlc_fhvhv_trip_insert_cmd,
+            dag=dag
+        )
+
+        dwh_tlc_fhvhv_trip_insert_lineage = DatahubEmitterOperator(
+            task_id="dwh_tlc_fhvhv_trip_insert_lineage",
+            datahub_conn_id="datahub_rest_default",
+            mces=[
+                builder.make_lineage_mce(
+                    upstream_urns=[
+                        builder.make_dataset_urn("airflow", "ods.tlc_fhvhv_trip")
+                    ],
+                    downstream_urn=builder.make_dataset_urn("airflow", "dwh.tlc_fhvhv_trip"),
+                )
+            ]
+        )
+
+        dwh_tlc_fhvhv_trip_insert_job >> dwh_tlc_fhvhv_trip_insert_lineage
+
+    # dmt_pub
+
+    with TaskGroup(group_id="dmt_pub_dim_date_overwrite") as dmt_pub_dim_date_overwrite:
+
+        dmt_pub_dim_date_overwrite_cmd = """
+            sdl-job start \
+                --job-name dmt_pub_dim_date_overwrite \
+                --year {{execution_date.year}} \
+                --month {{execution_date.month}}
+        """
+
+        dmt_pub_dim_date_overwrite_job = SSHOperator(
+            ssh_conn_id='ssh_to_client',
+            task_id='dmt_pub_dim_date_overwrite_job',
+            command=dmt_pub_dim_date_overwrite_cmd,
+            dag=dag
+        )
+
+        dmt_pub_dim_date_overwrite_lineage = DatahubEmitterOperator(
+            task_id="dmt_pub_dim_date_overwrite_lineage",
+            datahub_conn_id="datahub_rest_default",
+            mces=[
+                builder.make_lineage_mce(
+                    upstream_urns=[
+                        builder.make_dataset_urn("airflow", "stg.pub_dim_date")
+                    ],
+                    downstream_urn=builder.make_dataset_urn("airflow", "dmt.pub_dim_date"),
+                )
+            ]
+        )
+
+        dmt_pub_dim_date_overwrite_job >> dmt_pub_dim_date_overwrite_lineage
+
+    # dmt_geo
+
+    with TaskGroup(group_id="dmt_geo_dim_taxi_zone_upsert") as dmt_geo_dim_taxi_zone_upsert:
+
+        dmt_geo_dim_taxi_zone_upsert_cmd = """
+            sdl-job start \
+                --job-name dmt_geo_dim_taxi_zone_upsert \
+                --year {{execution_date.year}} \
+                --month {{execution_date.month}}
+        """
+
+        dmt_geo_dim_taxi_zone_upsert_job = SSHOperator(
+            ssh_conn_id='ssh_to_client',
+            task_id='dmt_geo_dim_taxi_zone_upsert_job',
+            command=dmt_geo_dim_taxi_zone_upsert_cmd,
+            dag=dag
+        )
+
+        dmt_geo_dim_taxi_zone_upsert_lineage = DatahubEmitterOperator(
+            task_id="dmt_geo_dim_taxi_zone_upsert_lineage",
+            datahub_conn_id="datahub_rest_default",
+            mces=[
+                builder.make_lineage_mce(
+                    upstream_urns=[
+                        builder.make_dataset_urn("airflow", "dwh.geo_taxi_zone")
+                    ],
+                    downstream_urn=builder.make_dataset_urn("airflow", "dmt.geo_dim_taxi_zone"),
+                )
+            ]
+        )
+
+        dmt_geo_dim_taxi_zone_upsert_job >> dmt_geo_dim_taxi_zone_upsert_lineage
+
+    # dmt_tlc
+
+    with TaskGroup(group_id="dmt_tlc_union_trip_insert") as dmt_tlc_union_trip_insert:
+
+        dmt_tlc_union_trip_insert_cmd = """
+            sdl-job start \
+                --job-name dmt_tlc_union_trip_insert \
+                --year {{execution_date.year}} \
+                --month {{execution_date.month}}
+        """
+
+        dmt_tlc_union_trip_insert_job = SSHOperator(
+            ssh_conn_id='ssh_to_client',
+            task_id='dmt_tlc_union_trip_insert_job',
+            command=dmt_tlc_union_trip_insert_cmd,
+            dag=dag
+        )
+
+        dmt_tlc_union_trip_insert_lineage = DatahubEmitterOperator(
+            task_id="dmt_tlc_union_trip_insert_lineage",
+            datahub_conn_id="datahub_rest_default",
+            mces=[
+                builder.make_lineage_mce(
+                    upstream_urns=[
+                        builder.make_dataset_urn("airflow", "dwh.tlc_yellow_trip"),
+                        builder.make_dataset_urn("airflow", "dwh.tlc_green_trip"),
+                        builder.make_dataset_urn("airflow", "dwh.tlc_fhv_trip"),
+                        builder.make_dataset_urn("airflow", "dwh.tlc_fhvhv_trip")
+                    ],
+                    downstream_urn=builder.make_dataset_urn("airflow", "dmt.tlc_union_trip"),
+                )
+            ]
+        )
+
+        dmt_tlc_union_trip_insert_job >> dmt_tlc_union_trip_insert_lineage
+
+    with TaskGroup(group_id="dmt_tlc_wide_trip_insert") as dmt_tlc_wide_trip_insert:
+
+        dmt_tlc_wide_trip_insert_cmd = """
+            sdl-job start \
+                --job-name dmt_tlc_wide_trip_insert \
+                --year {{execution_date.year}} \
+                --month {{execution_date.month}}
+        """
+
+        dmt_tlc_wide_trip_insert_job = SSHOperator(
+            ssh_conn_id='ssh_to_client',
+            task_id='dmt_tlc_wide_trip_insert_job',
+            command=dmt_tlc_wide_trip_insert_cmd,
+            dag=dag
+        )
+
+        dmt_tlc_wide_trip_insert_lineage = DatahubEmitterOperator(
+            task_id="dmt_tlc_wide_trip_insert_lineage",
+            datahub_conn_id="datahub_rest_default",
+            mces=[
+                builder.make_lineage_mce(
+                    upstream_urns=[
+                        builder.make_dataset_urn("airflow", "dmt.tlc_union_trip"),
+                        builder.make_dataset_urn("airflow", "dmt.pub_dim_date"),
+                        builder.make_dataset_urn("airflow", "dmt.geo_dim_taxi_zone")
+                    ],
+                    downstream_urn=builder.make_dataset_urn("airflow", "dmt.tlc_wide_trip"),
+                )
+            ]
+        )
+
+        dmt_tlc_wide_trip_insert_job >> dmt_tlc_wide_trip_insert_lineage
+
+    start = DummyOperator(task_id='start', dag=dag)
+    end = DummyOperator(task_id='end', dag=dag)
+
+    stg_pub_to_dmt_pub = DummyOperator(task_id='stg_pub_to_dmt_pub', dag=dag)
+
+    stg_geo_to_ods_geo = DummyOperator(task_id='stg_geo_to_ods_geo', dag=dag)
+    ods_geo_to_dwh_geo = DummyOperator(task_id='ods_geo_to_dwh_geo', dag=dag)
+    dwh_geo_to_dmt_geo = DummyOperator(task_id='dwh_geo_to_dmt_geo', dag=dag)
+
+    stg_tlc_to_ods_tlc = DummyOperator(task_id='stg_tlc_to_ods_tlc', dag=dag)
+    ods_tlc_to_dwh_tlc = DummyOperator(task_id='ods_tlc_to_dwh_tlc', dag=dag)
+    dwh_tlc_to_dmt_tlc = DummyOperator(task_id='dwh_tlc_to_dmt_tlc', dag=dag)
+
+    start >> stg_pub_data_feed >> stg_pub_to_dmt_pub >> dmt_pub_dim_date_overwrite >> dmt_tlc_wide_trip_insert >> end
+    start >> stg_geo_data_feed >> stg_geo_to_ods_geo >> ods_geo_taxi_zone_insert >> ods_geo_to_dwh_geo >> dwh_geo_taxi_zone_upsert >> dwh_geo_to_dmt_geo >> dmt_geo_dim_taxi_zone_upsert >> dmt_tlc_wide_trip_insert >> end
+    start >> stg_tlc_data_feed >> stg_tlc_to_ods_tlc >> [ods_tlc_yellow_trip_insert, ods_tlc_green_trip_insert, ods_tlc_fhv_trip_insert, ods_tlc_fhvhv_trip_insert] >> ods_tlc_to_dwh_tlc >> [dwh_tlc_yellow_trip_insert, dwh_tlc_green_trip_insert, dwh_tlc_fhv_trip_insert, dwh_tlc_fhvhv_trip_insert] >> dwh_tlc_to_dmt_tlc >> dmt_tlc_union_trip_insert >> dmt_tlc_wide_trip_insert >> end
