@@ -14,8 +14,6 @@ CRAWLER_ARGS_FILE="$SDL_HOME/log/crawler-args/$CRAWLER_NAME.json"
 
 feedTlcData() {
     printHeading "FEED TLC DATA"
-    # remove previous uploaded files
-    rm -rf /tmp/nyc-tlc
     mkdir /tmp/nyc-tlc
     aws s3 rm "s3://$DATA_BUCKET/stg/tlc" --recursive
 
@@ -29,21 +27,30 @@ feedTlcData() {
 #     wget --tries=10 --timeout=10 "https://github.com/bluishglc/nyc-tlc-data/releases/download/v1.0/${category}_tripdata_${YEAR}-${MONTH}.csv.gz" -P "/tmp/nyc-tlc/"
 #     gzip -d "/tmp/nyc-tlc/${category}_tripdata_${YEAR}-${MONTH}.csv.gz"
 
-    if [ "$REGION" = "cn-north-1" -o "$REGION" = "cn-northwest-1" ]; then
-        export AWS_ACCESS_KEY_ID="$NYC_TLC_ACCESS_KEY_ID"
-        export AWS_SECRET_ACCESS_KEY="$NYC_TLC_SECRET_ACCESS_KEY"
-        export AWS_DEFAULT_REGION="us-east-1"
-        aws s3 cp "s3://nyc-tlc/csv_backup/${category}_tripdata_${YEAR}-${MONTH}.csv" "/tmp/nyc-tlc/"
-        unset AWS_ACCESS_KEY_ID
-        unset AWS_SECRET_ACCESS_KEY
-        unset AWS_DEFAULT_REGION
-    else
-        aws s3 cp "s3://nyc-tlc/csv_backup/${category}_tripdata_${YEAR}-${MONTH}.csv" "/tmp/nyc-tlc/"
+    rawFile="/tmp/nyc-tlc/${category}_tripdata_${YEAR}-${MONTH}.csv"
+    if [ ! -f "$rawFile" ]; then
+        if [ "$REGION" = "cn-north-1" -o "$REGION" = "cn-northwest-1" ]; then
+            export AWS_ACCESS_KEY_ID="$NYC_TLC_ACCESS_KEY_ID"
+            export AWS_SECRET_ACCESS_KEY="$NYC_TLC_SECRET_ACCESS_KEY"
+            export AWS_DEFAULT_REGION="us-east-1"
+            aws s3 cp "s3://nyc-tlc/csv_backup/${category}_tripdata_${YEAR}-${MONTH}.csv" $rawFile
+            unset AWS_ACCESS_KEY_ID
+            unset AWS_SECRET_ACCESS_KEY
+            unset AWS_DEFAULT_REGION
+        else
+            aws s3 cp "s3://nyc-tlc/csv_backup/${category}_tripdata_${YEAR}-${MONTH}.csv" "/tmp/nyc-tlc/"
+        fi
     fi
 
-    aws s3 cp "/tmp/nyc-tlc/${category}_tripdata_${YEAR}-${MONTH}.csv" "s3://$DATA_BUCKET/stg/tlc/${category}_trip/"
+    sampleFile="/tmp/nyc-tlc/${category}_tripdata_${YEAR}-${MONTH}.sample.csv"
+    if [ ! -f "$sampleFile" ]; then
+        # the data set files are too big, to make job run faster, extract 1/100 lines
+        awk '!(NR%100)' "$rawFile" > "$sampleFile"
+    fi
+    aws s3 cp "$sampleFile" "s3://$DATA_BUCKET/stg/tlc/${category}_trip/"
 done
 }
+
 
 feedGeoData() {
     printHeading "FEED GEO DATA"

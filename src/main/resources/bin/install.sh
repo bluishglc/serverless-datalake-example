@@ -17,7 +17,6 @@ CONSTANTS_FILE="$SDL_HOME/bin/constants.sh"
 install() {
     printHeading "INSTALL SERVERLESS DATALAKE"
     installAwsCli
-    configAwsCli
     createIamRole
     replaceEnvVars
     createCliShortcuts
@@ -53,7 +52,10 @@ replaceEnvVars() {
     sed -i "s|NYC_TLC_ACCESS_KEY_ID=.*|NYC_TLC_ACCESS_KEY_ID=$NYC_TLC_ACCESS_KEY_ID|g" "$CONSTANTS_FILE"
     sed -i "s|NYC_TLC_SECRET_ACCESS_KEY=.*|NYC_TLC_SECRET_ACCESS_KEY=$NYC_TLC_SECRET_ACCESS_KEY|g" "$CONSTANTS_FILE"
 
+    sed -i "s|s3://[a-zA-Z0-9_-]*/|s3://$DATA_BUCKET/|g"
+
     find "$SDL_HOME/sql/" -type f -name "*.sql" -print0 | xargs -0 sed -i "s|s3://[a-zA-Z0-9_-]*/|s3://$DATA_BUCKET/|g"
+
 }
 
 createCliShortcuts() {
@@ -72,9 +74,10 @@ createCliShortcuts() {
 }
 
 installAwsCli() {
+    echo "Install AWS CLI V2"
     # aws cli is very stupid!
-    # for v1, it is installed via rpm/yum, so with 'yum list installed awscli', we get get version
-    # for v2, it is installed via zip package, it does NOT work with 'yum list installed awscli', only 'aws --version' works
+    # for v1, it is installed via rpm/yum, so with 'yum list installed awscli', we can't get version
+    # for v2, it is installed via zip Packages, it does NOT work with 'yum list installed awscli', only 'aws --version' works
     # but for v1, 'aws --version' does not work, it DO print version message, but does NOT return string value!
     # if let message=$(aws --version), it prints message on console, but $message is empty!
     # so, it is REQUIRED to append '2>&1', the following is right way to get version:
@@ -84,29 +87,49 @@ installAwsCli() {
     sudo yum -y remove awscli
 
     echo "Remove awscli v2 if exists in case not latest version ..."
-    sudo rm /usr/bin/aws
-    sudo rm /usr/local/bin/aws
-    sudo rm /usr/bin/aws_completer
-    sudo rm /usr/local/bin/aws_completer
-    sudo rm -rf /usr/local/aws-cli
+    sudo rm /usr/bin/aws &> /dev/null
+    sudo rm /usr/local/bin/aws &> /dev/null
+    sudo rm /usr/bin/aws_completer &> /dev/null
+    sudo rm /usr/local/bin/aws_completer &> /dev/null
+    sudo rm -rf /usr/local/aws-cli &> /dev/null
 
     echo "Install latest awscli v2 ..."
-    wget "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -P "/tmp/awscli/"
+    wget "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -P "/tmp/awscli/"  &> /dev/null
     unzip /tmp/awscli/awscli-exe-linux-x86_64.zip -d /tmp/awscli/ &> /dev/null
     sudo /tmp/awscli/aws/install
-}
+    sudo ln -s /usr/local/bin/aws /usr/bin/aws
 
-configAwsCli() {
-    mkdir -p ~/.aws
-    cat <<-EOF > ~/.aws/config
+    echo "Create credentials for awscli ..."
+    tee /tmp/config <<EOF
 [default]
 region = $REGION
 EOF
-    cat <<-EOF > ~/.aws/credentials
+    tee /tmp/credentials <<EOF
 [default]
 aws_access_key_id = $ACCESS_KEY_ID
 aws_secret_access_key = $SECRET_ACCESS_KEY
 EOF
+    # for non-root users
+    users=(ec2-user hadoop)
+    for user in "${users[@]}"; do
+        # if user exists, add awscli credentials
+        egrep "^$user\:" /etc/passwd >& /dev/null
+        if [ "$?" == "0" ]; then
+            sudo rm -rf /home/$user/.aws
+            sudo mkdir /home/$user/.aws
+            sudo cp /tmp/config /home/$user/.aws/
+            sudo cp /tmp/credentials /home/$user/.aws/
+            sudo chown -R $user:$user /home/$user/.aws
+        fi
+    done
+    # for root user
+    sudo rm -rf /root/.aws
+    sudo mkdir /root/.aws
+    sudo cp /tmp/config /root/.aws/
+    sudo cp /tmp/credentials /root/.aws/
+    sudo chown -R root:root /root/.aws
+
+    rm -f /tmp/config /tmp/credentials
 }
 
 createBucketIfNotExists() {
