@@ -2,6 +2,14 @@
 
 ---
 
+## Update Nodes
+
+- @2022-11-04: Original TLC CSV files on S3 are replaced by parquet files. CSV files are moved to a backup folder, so `feeder.sh` is changed.
+
+- @2022-12-21: A new branch: datahub is ready, add features to support metadata management tool: datahub.
+
+---
+
 ## 1. Build
 
 To build this project, you need have JDK & Maven on your local, and you should also have an AWS account with Admin role.
@@ -41,12 +49,7 @@ then run install command:
 
 Note: the parameters of cli will overwrite values in prd/dev properties files.
 
-## 3. Create Data Repo (China Region Only)
-
-Because the nyc-tlc data sets are hosted on global S3, they are unreachable via china account AKSK, so we need download
-partial csv files to local first, then upload to China S3. Following cli will download 
-
-## 4. Init 
+## 3. Init 
 
 This step will create crawlers, jobs, databases and tables.
 
@@ -54,7 +57,7 @@ This step will create crawlers, jobs, databases and tables.
 sdl.sh init
 ```
 
-## 5. Run
+## 4. Run
 
 There are 2 ways to run, one is by airflow, the other is by cli. for airflow, you must have a running airflow environment, and have a configured ssh connection name `ssh_to_client` which can connect to current node via ssh, then copy `wfl/sdl_monthly_build.py` to the dag folder of airflow or assign path to --airflow-dags-home in install command, if all done, you will see a dag named `sdl-monthly-build`, then you can start it from airflow console page. Or you can run this project via cli immediately as following:
 
@@ -63,7 +66,7 @@ There are 2 ways to run, one is by airflow, the other is by cli. for airflow, yo
 ```
 This command will run a full batch of data in 2020/01.
 
-### 6. Known Issues
+### 5. Known Issues
 
 When 1.0 relase, it works well on cn and us regions, however, recently, if run on us-east-1 region, there will be an error when run jobs:
 
@@ -74,9 +77,9 @@ Exception in User Class: java.io.IOException : com.amazon.ws.emr.hadoop.fs.shade
 It is not caused by IAM or S3 policies, I also checked VPC S3 endpoint, no any problems, so by now, we have not find root cause. 
 
 
-## 7. Updates
+## 6. Notes
 
-### 7.1 @2022-11-04
+### 6.1 @2022-11-04
 
 csv https download link is unavailable from May 13, 2022, they are changed to parquet files. so following cli does not work anymore.
 ```bash
