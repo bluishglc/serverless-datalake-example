@@ -53,7 +53,7 @@ Note: the parameters of cli will overwrite values in prd/dev properties files.
 This step will create crawlers, jobs, databases and tables.
 
 ```bash
-sdl.sh init
+sdl init
 ```
 
 ## 4. Run
@@ -61,7 +61,7 @@ sdl.sh init
 There are 2 ways to run, one is by airflow, the other is by cli. for airflow, you must have a running airflow environment, and have a configured ssh connection name `ssh_to_client` which can connect to current node via ssh, then copy `wfl/sdl_monthly_build.py` to the dag folder of airflow or assign path to --airflow-dags-home in install command, if all done, you will see a dag named `sdl-monthly-build`, then you can start it from airflow console page. Or you can run this project via cli immediately as following:
 
 ```bash
-./serverless-datalake-example-1.0/bin/sdl.sh build --year 2020 --month 01
+sdl build --year 2020 --month 01
 ```
 This command will run a full batch of data in 2020/01.
 

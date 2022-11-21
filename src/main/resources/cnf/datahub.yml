@@ -1,8 +1,0 @@
-# just a placeholder as reference, bin/datahub.sh will generate this yaml file.
-source:
-  type: datahub-lineage-file
-  config:
-    # Coordinates
-    file: ${app.home}/cnf/lineage.yml
-    # Whether we want to query datahub-gms for upstream data
-    preserve_upstream: False
