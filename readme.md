@@ -13,22 +13,34 @@
 
 To build this project, you need have JDK & Maven on your local, and you should also have an AWS account with Admin role.
 
-1. Check out project.
+1. Check out project. **Note that If you need run and demo datahub integration feature, please check out datahub branch.**
 2. Update src/main/profiles/prd.properties, change replace all "<...>" values against your environment.
 3. Run maven command under project root dir:
 
 ```bash
 mvn clean package
 ```
+ 
 
 4. Get serverless-datalake-example-1.0.zip file under target folder.
 
 ## 2. Install
 
-You have 2 ways to get installer package, one is building from source codes just as step above, the other one is downloading directly:
+You have 2 ways to get installer package, one is building from source codes just as step above, the other one is downloading directly: 
 
 ```bash
-wget --tries=10 --timeout=10 https://github.com/bluishglc/serverless-datalake-example/releases/download/v1.0/serverless-datalake-example-1.0.zip
+wget https://github.com/bluishglc/serverless-datalake-example/releases/download/v1.0/serverless-datalake-example-1.0.zip
+```
+
+**Note that If you need run and demo datahub integration feature, please download from datahub release: **
+
+```bash
+wget https://github.com/bluishglc/serverless-datalake-example/releases/download/datahub/serverless-datalake-example-1.0.zip
+```
+
+unzip package:
+
+```bash
 unzip serverless-datalake-example-1.0.zip
 ```
 
