@@ -4,9 +4,8 @@
 
 ## Update Nodes
 
-- @2022-11-04: Original TLC CSV files on S3 are replaced by parquet files. CSV files are moved to a backup folder, so `feeder.sh` is changed.
-
-- @2022-12-21: A new branch: datahub is ready, add features to support metadata management tool: datahub.
+1. Original TLC CSV files on S3 are replaced by parquet files. CSV files are moved to a backup folder, so `feeder.sh` is changed. @2022-11-04
+2. A new branch: datahub is ready, add features to support metadata management tool: datahub. @2022-12-21
 
 ---
 
