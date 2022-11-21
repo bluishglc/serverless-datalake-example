@@ -13,13 +13,14 @@
 
 To build this project, you need have JDK & Maven on your local, and you should also have an AWS account with Admin role.
 
-1. Check out project.
+1. Check out project. **Note that If you need run and demo datahub integration feature, please check out datahub branch.**
 2. Update src/main/profiles/prd.properties, change replace all "<...>" values against your environment.
 3. Run maven command under project root dir:
 
 ```bash
 mvn clean package
 ```
+
 
 4. Get serverless-datalake-example-1.0.zip file under target folder.
 
@@ -28,7 +29,18 @@ mvn clean package
 You have 2 ways to get installer package, one is building from source codes just as step above, the other one is downloading directly:
 
 ```bash
-wget --tries=10 --timeout=10 https://github.com/bluishglc/serverless-datalake-example/releases/download/v1.0/serverless-datalake-example-1.0.zip
+wget https://github.com/bluishglc/serverless-datalake-example/releases/download/v1.0/serverless-datalake-example-1.0-master.zip -O serverless-datalake-example-1.0.zip
+```
+
+**Note that If you need run and demo datahub integration feature, please download from datahub release: **
+
+```bash
+wget https://github.com/bluishglc/serverless-datalake-example/releases/download/v1.0/serverless-datalake-example-1.0-datahub.zip -O serverless-datalake-example-1.0.zip
+```
+
+unzip package:
+
+```bash
 unzip serverless-datalake-example-1.0.zip
 ```
 
@@ -48,12 +60,12 @@ then run install command:
 
 Note: the parameters of cli will overwrite values in prd/dev properties files.
 
-## 3. Init 
+## 3. Init
 
 This step will create crawlers, jobs, databases and tables.
 
 ```bash
-sdl init
+sdl.sh init
 ```
 
 ## 4. Run
@@ -61,7 +73,7 @@ sdl init
 There are 2 ways to run, one is by airflow, the other is by cli. for airflow, you must have a running airflow environment, and have a configured ssh connection name `ssh_to_client` which can connect to current node via ssh, then copy `wfl/sdl_monthly_build.py` to the dag folder of airflow or assign path to --airflow-dags-home in install command, if all done, you will see a dag named `sdl-monthly-build`, then you can start it from airflow console page. Or you can run this project via cli immediately as following:
 
 ```bash
-sdl build --year 2020 --month 01
+./serverless-datalake-example-1.0/bin/sdl.sh build --year 2020 --month 01
 ```
 This command will run a full batch of data in 2020/01.
 
@@ -73,7 +85,7 @@ When 1.0 relase, it works well on cn and us regions, however, recently, if run o
 Exception in User Class: java.io.IOException : com.amazon.ws.emr.hadoop.fs.shaded.com.amazonaws.services.s3.model.AmazonS3Exception: Access Denied (Service: Amazon S3; Status Code: 403; Error Code: AccessDenied ....
 ```
 
-It is not caused by IAM or S3 policies, I also checked VPC S3 endpoint, no any problems, so by now, we have not find root cause. 
+It is not caused by IAM or S3 policies, I also checked VPC S3 endpoint, no any problems, so by now, we have not find root cause.
 
 
 ## 6. Notes
