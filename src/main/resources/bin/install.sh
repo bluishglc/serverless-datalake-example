@@ -52,7 +52,10 @@ replaceEnvVars() {
     sed -i "s|NYC_TLC_ACCESS_KEY_ID=.*|NYC_TLC_ACCESS_KEY_ID=$NYC_TLC_ACCESS_KEY_ID|g" "$CONSTANTS_FILE"
     sed -i "s|NYC_TLC_SECRET_ACCESS_KEY=.*|NYC_TLC_SECRET_ACCESS_KEY=$NYC_TLC_SECRET_ACCESS_KEY|g" "$CONSTANTS_FILE"
 
+    sed -i "s|s3://[a-zA-Z0-9_-]*/|s3://$DATA_BUCKET/|g"
+
     find "$SDL_HOME/sql/" -type f -name "*.sql" -print0 | xargs -0 sed -i "s|s3://[a-zA-Z0-9_-]*/|s3://$DATA_BUCKET/|g"
+
 }
 
 createCliShortcuts() {
